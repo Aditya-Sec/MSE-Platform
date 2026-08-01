@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620">
+  <defs><style>.mono{font-family:'SFMono-Regular',Consolas,Menlo,monospace;}</style></defs>
+  <rect width="1200" height="620" fill="#0a0d10"/>
+  <text x="20" y="30" class="mono" font-size="16" fill="#4dd4e8">Foundation Layer — Low-Level Design</text>
+  <text x="20" y="50" class="mono" font-size="11" fill="#5a6169">Matches bicep/foundation/*.bicep exactly — every subnet/rule below is in the compiled template, nothing here is aspirational.</text>
+
+  <!-- VNet outer box -->
+  <rect x="20" y="70" width="760" height="480" rx="10" fill="#10151a" stroke="#1c2226"/>
+  <text x="40" y="95" class="mono" font-size="13" fill="#eef2f4">vnet-mse-platform — 10.10.0.0/16</text>
+
+  <!-- Subnets -->
+  <rect x="40" y="110" width="340" height="55" rx="6" fill="#0d1012" stroke="#4dd4e8" stroke-width="1.5"/>
+  <text x="55" y="130" class="mono" font-size="11" fill="#4dd4e8">AzureFirewallSubnet</text>
+  <text x="55" y="148" class="mono" font-size="10" fill="#9aa3ab">10.10.0.0/24 (required exact name)</text>
+
+  <rect x="400" y="110" width="340" height="55" rx="6" fill="#0d1012" stroke="#4dd4e8" stroke-width="1.5"/>
+  <text x="415" y="130" class="mono" font-size="11" fill="#4dd4e8">AzureBastionSubnet</text>
+  <text x="415" y="148" class="mono" font-size="10" fill="#9aa3ab">10.10.1.0/24 (required exact name)</text>
+
+  <rect x="40" y="180" width="340" height="55" rx="6" fill="#0d1012" stroke="#1c2226"/>
+  <text x="55" y="200" class="mono" font-size="11" fill="#eef2f4">snet-app-gateway</text>
+  <text x="55" y="218" class="mono" font-size="10" fill="#9aa3ab">10.10.2.0/24</text>
+
+  <rect x="400" y="180" width="340" height="55" rx="6" fill="#0d1012" stroke="#1c2226"/>
+  <text x="415" y="200" class="mono" font-size="11" fill="#eef2f4">snet-private-endpoints</text>
+  <text x="415" y="218" class="mono" font-size="10" fill="#9aa3ab">10.10.30.0/24</text>
+
+  <rect x="40" y="250" width="340" height="55" rx="6" fill="#0d1012" stroke="#1c2226"/>
+  <text x="55" y="270" class="mono" font-size="11" fill="#eef2f4">snet-workload-windows</text>
+  <text x="55" y="288" class="mono" font-size="10" fill="#9aa3ab">10.10.10.0/24 — NSG: nsg-mse-workload</text>
+
+  <rect x="400" y="250" width="340" height="55" rx="6" fill="#0d1012" stroke="#1c2226"/>
+  <text x="415" y="270" class="mono" font-size="11" fill="#eef2f4">snet-workload-linux</text>
+  <text x="415" y="288" class="mono" font-size="10" fill="#9aa3ab">10.10.11.0/24 — NSG: nsg-mse-workload</text>
+
+  <rect x="40" y="320" width="700" height="55" rx="6" fill="#0d1012" stroke="#1c2226"/>
+  <text x="55" y="340" class="mono" font-size="11" fill="#eef2f4">snet-aks</text>
+  <text x="55" y="358" class="mono" font-size="10" fill="#9aa3ab">10.10.20.0/22 (larger range — reserved for AKS pod IPs)</text>
+
+  <!-- NSG rule table -->
+  <text x="40" y="410" class="mono" font-size="12" fill="#4dd4e8">nsg-mse-workload — rules (in priority order)</text>
+  <g class="mono" font-size="10.5" fill="#9aa3ab">
+    <text x="40" y="435">100  Allow-HTTPS-Inbound          Internet → *:443</text>
+    <text x="40" y="453">200  Allow-RDP-From-Bastion-Only  10.10.1.0/24 → *:3389</text>
+    <text x="40" y="471">201  Allow-SSH-From-Bastion-Only  10.10.1.0/24 → *:22</text>
+    <text x="40" y="489">300  Deny-Direct-RDP-From-Internet Internet → *:3389</text>
+    <text x="40" y="507">301  Deny-Direct-SSH-From-Internet Internet → *:22</text>
+    <text x="40" y="525">*    (implicit) Deny all else</text>
+  </g>
+
+  <!-- Key Vault box -->
+  <rect x="800" y="70" width="380" height="480" rx="10" fill="#10151a" stroke="#1c2226"/>
+  <text x="820" y="95" class="mono" font-size="13" fill="#eef2f4">kv-mse-platform-01</text>
+
+  <g class="mono" font-size="11" fill="#9aa3ab">
+    <text x="820" y="130">SKU: standard</text>
+    <text x="820" y="155">enableRbacAuthorization: true</text>
+    <text x="820" y="178" fill="#5a6169">(Entra ID RBAC, not legacy access</text>
+    <text x="820" y="194" fill="#5a6169">policies — ties to Layer 3 identity)</text>
+    <text x="820" y="222">enableSoftDelete: true</text>
+    <text x="820" y="245">softDeleteRetentionInDays: 90</text>
+    <text x="820" y="270">enablePurgeProtection: true</text>
+    <text x="820" y="300">networkAcls.defaultAction: Deny</text>
+    <text x="820" y="323">bypass: AzureServices</text>
+  </g>
+
+  <rect x="820" y="350" width="340" height="1" fill="#1c2226"/>
+  <text x="820" y="380" class="mono" font-size="10.5" fill="#5a6169">Stores: Logic App connection secrets,</text>
+  <text x="820" y="398" class="mono" font-size="10.5" fill="#5a6169">Sentinel connector keys, service</text>
+  <text x="820" y="416" class="mono" font-size="10.5" fill="#5a6169">principal credentials for later phases</text>
+</svg>
