@@ -24,13 +24,13 @@ Design and build a complete Microsoft-native enterprise security architecture â€
 | # | Layer | Core products |
 |---|---|---|
 | 1 | Foundation | Virtual Network, NSGs, Key Vault |
-| 2 | Identity Security | Entra ID, Conditional Access, Defender for Identity |
-| 3 | Endpoint Security | Defender for Endpoint, Intune |
-| 4 | SIEM / SOAR | Sentinel, Logic Apps |
-| 5 | Cloud & Network Security | Defender for Cloud, Azure Firewall, WAF, Front Door, DDoS Protection |
-| 6 | Email Security / CASB / Data Protection | Defender for Office 365, Defender for Cloud Apps, Purview |
-| 7 | Threat Intelligence / AI | Defender TI, Security Copilot |
-| 8 | Attack Simulations / Runbooks | 7 documented incident scenarios |
+| 2 | Identity + Endpoint | Entra ID, Conditional Access, Intune, Defender for Identity, Defender for Servers |
+| 3 | SIEM / SOAR | Sentinel, Logic Apps |
+| 4 | Cloud & Network Security | Defender for Cloud, Azure Firewall, WAF, Front Door, DDoS Protection |
+| 5 | Email Security / CASB / Data Protection | Defender for Office 365, Defender for Cloud Apps, Purview |
+| 6 | Threat Intelligence / AI | Defender TI, Security Copilot |
+| 7 | Attack Simulations / Runbooks | 7 documented incident scenarios |
+| 8 | Documentation + polish | HLD/LLD finalization, deployment guide, SOC operations guide |
 
 ## 4. Honest positioning â€” read before anything else in this repo
 

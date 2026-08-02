@@ -1,0 +1,24 @@
+// ATT&CK: T1562.001 — Impair Defenses: Disable or Modify Tools
+// Detects Microsoft Defender Antivirus or tamper protection being disabled
+// on an endpoint — a common pre-malware-deployment step, since most
+// commodity malware and ransomware fails or gets caught immediately with
+// real-time protection still active.
+// Data source: DeviceEvents (Defender for Endpoint advanced hunting)
+//
+// Schema note, stated honestly: Microsoft's advanced hunting ActionType
+// values are documented but do shift between schema versions — verify
+// current ActionType strings against the live Advanced Hunting schema
+// reference before relying on this in production rather than assuming
+// this exact list is still current.
+
+DeviceEvents
+| where TimeGenerated > ago(24h)
+| where ActionType in (
+    "AntivirusDisabled",
+    "AntivirusScanCancelled",
+    "TamperingAttempt",
+    "DefenderStatusChanged"
+)
+| project TimeGenerated, DeviceName, ActionType, InitiatingProcessAccountName,
+          InitiatingProcessCommandLine, InitiatingProcessFileName
+| extend AlertSeverity = "High"

@@ -1,0 +1,32 @@
+{
+  "_comment": "Real Microsoft Graph schema for /deviceManagement/deviceCompliancePolicies, @odata.type windows10CompliancePolicy. Deployable via Microsoft Graph PowerShell (New-MgDeviceManagementDeviceCompliancePolicy) or the Intune admin center — Intune policies are Graph objects, same category as Conditional Access, not ARM resources.",
+  "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
+  "displayName": "MSE - Windows Device Compliance Baseline",
+  "description": "Baseline compliance requirements referenced by CA003 (Require Compliant Device for Privileged Roles) — a device only satisfies that Conditional Access policy if it passes everything below.",
+  "bitLockerEnabled": true,
+  "secureBootEnabled": true,
+  "codeIntegrityEnabled": true,
+  "osMinimumVersion": "10.0.19045",
+  "passwordRequired": true,
+  "passwordMinimumLength": 12,
+  "passwordRequiredType": "alphanumeric",
+  "passwordMinutesOfInactivityBeforeLock": 15,
+  "activeFirewallRequired": true,
+  "defenderEnabled": true,
+  "rtpEnabled": true,
+  "scheduledActionsForRule": [
+    {
+      "ruleName": "PasswordRequired",
+      "scheduledActionConfigurations": [
+        {
+          "actionType": "block",
+          "gracePeriodHours": 0
+        },
+        {
+          "actionType": "notification",
+          "gracePeriodHours": 24
+        }
+      ]
+    }
+  ]
+}

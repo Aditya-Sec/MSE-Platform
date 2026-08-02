@@ -1,0 +1,20 @@
+{
+  "_comment": "Real Microsoft Graph API schema for /identity/conditionalAccess/policies — this is the exact JSON shape the Graph API expects, deployable via Microsoft Graph PowerShell or REST, not a Bicep resource (Entra ID Conditional Access is a Graph object, not an ARM/Azure resource — that distinction matters and is documented, not glossed over).",
+  "displayName": "CA001 - Require MFA for All Users",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "users": {
+      "includeUsers": ["All"],
+      "excludeUsers": ["emergency-access-account-id-placeholder"]
+    },
+    "applications": {
+      "includeApplications": ["All"]
+    },
+    "clientAppTypes": ["all"]
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["mfa"]
+  },
+  "_deployment_note": "state is set to 'enabledForReportingButNotEnforced' deliberately — the real-world rollout pattern is report-only first, review sign-in logs for unexpected breakage, then flip to 'enabled'. Shipping straight to 'enabled' without a report-only period is how CA policies lock organizations out of their own tenant."
+}

@@ -1,0 +1,24 @@
+{
+  "_comment": "Highest-priority policy of the three — privileged admin roles (Global Admin, Privileged Role Admin, Security Admin) must come from an Intune-compliant, hybrid-Azure-AD-joined device. This directly closes the 'privileged role assignment from an untrusted device' gap this project's own KQL detections (Phase 3) look for.",
+  "displayName": "CA003 - Require Compliant Device for Privileged Roles",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "users": {
+      "includeRoles": [
+        "62e90394-69f5-4237-9190-012177145e10",
+        "e8611ab8-c189-46e8-94e1-60213ab1f814",
+        "194ae4cb-b126-40b2-bd5b-6091b380977d"
+      ],
+      "_roles_comment": "Global Administrator, Privileged Role Administrator, Security Administrator role template IDs — Microsoft's fixed, documented GUIDs for these built-in roles, not arbitrary values"
+    },
+    "applications": {
+      "includeApplications": ["All"]
+    },
+    "clientAppTypes": ["all"]
+  },
+  "grantControls": {
+    "operator": "AND",
+    "builtInControls": ["mfa", "compliantDevice"]
+  },
+  "_deployment_note": "operator: AND (not OR like CA001) is deliberate here — for privileged roles, both MFA and a compliant device are required together, not either/or. This is a stricter bar than the baseline MFA policy on purpose."
+}

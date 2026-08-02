@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="480" viewBox="0 0 1100 480">
+  <defs>
+    <style>.mono{font-family:'SFMono-Regular',Consolas,Menlo,monospace;}</style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#4dd4e8"/>
+    </marker>
+  </defs>
+  <rect width="1100" height="480" fill="#0a0d10"/>
+  <text x="20" y="30" class="mono" font-size="15" fill="#4dd4e8">Phase 2 — Identity + Endpoint — Low-Level Design</text>
+  <text x="20" y="50" class="mono" font-size="11" fill="#5a6169">Every box below maps to a real file in this repo — nothing here isn't in the code</text>
+
+  <!-- Entra ID -->
+  <rect x="40" y="80" width="220" height="70" rx="8" fill="#0d1012" stroke="#4dd4e8" stroke-width="1.5"/>
+  <text x="150" y="108" text-anchor="middle" class="mono" font-size="12" fill="#4dd4e8">Entra ID Sign-In</text>
+  <text x="150" y="126" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">SigninLogs → Sentinel</text>
+  <line x1="260" y1="115" x2="300" y2="115" stroke="#4dd4e8" marker-end="url(#arrow)"/>
+
+  <!-- Conditional Access -->
+  <rect x="305" y="60" width="260" height="110" rx="8" fill="#10151a" stroke="#1c2226"/>
+  <text x="435" y="82" text-anchor="middle" class="mono" font-size="12" fill="#eef2f4">Conditional Access</text>
+  <text x="435" y="100" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">CA001 — Require MFA (all users)</text>
+  <text x="435" y="116" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">CA002 — Block legacy auth</text>
+  <text x="435" y="132" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">CA003 — Compliant device, privileged roles</text>
+  <text x="435" y="150" text-anchor="middle" class="mono" font-size="9" fill="#5a6169">deployed report-only → reviewed → enforced</text>
+
+  <line x1="565" y1="115" x2="600" y2="115" stroke="#4dd4e8" marker-end="url(#arrow)"/>
+
+  <!-- Intune -->
+  <rect x="605" y="80" width="220" height="70" rx="8" fill="#10151a" stroke="#1c2226"/>
+  <text x="715" y="103" text-anchor="middle" class="mono" font-size="12" fill="#eef2f4">Intune Compliance</text>
+  <text x="715" y="120" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">BitLocker · Secure Boot · Defender on</text>
+  <text x="715" y="136" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">feeds CA003's "compliant device" check</text>
+
+  <!-- Defender for Identity -->
+  <rect x="40" y="220" width="260" height="90" rx="8" fill="#0d1012" stroke="#4dd4e8" stroke-width="1.5"/>
+  <text x="170" y="245" text-anchor="middle" class="mono" font-size="12" fill="#4dd4e8">Defender for Identity</text>
+  <text x="170" y="263" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">Microsoft.Security/pricings</text>
+  <text x="170" y="279" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">name: Identity, tier: Standard</text>
+  <text x="170" y="297" text-anchor="middle" class="mono" font-size="9" fill="#5a6169">subscription-scoped (verified via BCP135)</text>
+
+  <!-- Defender for Servers -->
+  <rect x="340" y="220" width="260" height="90" rx="8" fill="#0d1012" stroke="#4dd4e8" stroke-width="1.5"/>
+  <text x="470" y="245" text-anchor="middle" class="mono" font-size="12" fill="#4dd4e8">Defender for Servers</text>
+  <text x="470" y="263" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">Microsoft.Security/pricings</text>
+  <text x="470" y="279" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">name: VirtualMachines, subPlan: P2</text>
+  <text x="470" y="297" text-anchor="middle" class="mono" font-size="9" fill="#5a6169">P2 required for EDR — P1 excludes it</text>
+
+  <!-- KQL detections -->
+  <rect x="640" y="220" width="400" height="90" rx="8" fill="#10151a" stroke="#1c2226"/>
+  <text x="840" y="245" text-anchor="middle" class="mono" font-size="12" fill="#eef2f4">KQL Detections (this phase)</text>
+  <text x="840" y="263" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">Privileged sign-in from non-compliant device</text>
+  <text x="840" y="279" text-anchor="middle" class="mono" font-size="10" fill="#9aa3ab">Defender tamper/AV-disable attempt (T1562.001)</text>
+  <text x="840" y="297" text-anchor="middle" class="mono" font-size="9" fill="#5a6169">bulk of KQL content arrives in Phase 3</text>
+
+  <line x1="150" y1="150" x2="150" y2="220" stroke="#3a3f44" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  <line x1="470" y1="150" x2="470" y2="220" stroke="#3a3f44" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+  <line x1="300" y1="265" x2="640" y2="265" stroke="#3a3f44" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+  <text x="20" y="360" class="mono" font-size="11" fill="#4dd4e8">■ Cyan / solid = Bicep-deployable and validated this phase</text>
+  <text x="20" y="378" class="mono" font-size="11" fill="#9aa3ab">■ Dimmed = Microsoft Graph object (Conditional Access, Intune) — not ARM/Bicep, deployed via Graph PowerShell instead</text>
+  <text x="20" y="410" class="mono" font-size="11" fill="#5a6169">Why the distinction matters: Conditional Access and Intune policies live in Entra ID / Microsoft Graph, a separate</text>
+  <text x="20" y="428" class="mono" font-size="11" fill="#5a6169">control plane from Azure Resource Manager. Claiming they're "Bicep resources" would be inaccurate — this project</text>
+  <text x="20" y="446" class="mono" font-size="11" fill="#5a6169">states that distinction rather than blurring it for a cleaner-looking diagram.</text>
+</svg>

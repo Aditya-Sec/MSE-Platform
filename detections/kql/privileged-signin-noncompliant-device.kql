@@ -1,0 +1,22 @@
+// Detects a privileged-role sign-in where the device failed Conditional
+// Access compliance checks — i.e., CA003 (Require Compliant Device for
+// Privileged Roles) either blocked or would have blocked the attempt.
+// Data source: SigninLogs (Azure AD / Entra ID sign-in logs in Sentinel)
+//
+// This detection exists specifically to catch two real-world failure
+// modes: (1) CA003 is deployed in report-only mode and hasn't been
+// enforced yet, so this is the interim detective control while the policy
+// is still being validated, and (2) a legacy/break-glass account that's
+// intentionally excluded from CA003 gets used for something it shouldn't.
+
+SigninLogs
+| where TimeGenerated > ago(24h)
+| where ResultType == 0  // successful sign-in
+| mv-expand AppliedConditionalAccessPolicies
+| where AppliedConditionalAccessPolicies.displayName has "Privileged Roles"
+| where AppliedConditionalAccessPolicies.result in ("failure", "notApplied")
+| extend DeviceCompliant = tostring(DeviceDetail.isCompliant)
+| where DeviceCompliant == "false" or isempty(DeviceCompliant)
+| project TimeGenerated, UserPrincipalName, AppDisplayName, DeviceDetail,
+          IPAddress, Location, AppliedConditionalAccessPolicies
+| extend AlertSeverity = "High"

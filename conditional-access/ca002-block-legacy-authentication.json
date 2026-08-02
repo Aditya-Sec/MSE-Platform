@@ -1,0 +1,20 @@
+{
+  "_comment": "Blocks legacy authentication protocols (basic auth, IMAP, POP, older Office clients) that don't support modern auth / MFA — a documented, common initial-access vector since legacy protocols can't be challenged for MFA at all.",
+  "displayName": "CA002 - Block Legacy Authentication",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "users": {
+      "includeUsers": ["All"],
+      "excludeUsers": ["emergency-access-account-id-placeholder"]
+    },
+    "applications": {
+      "includeApplications": ["All"]
+    },
+    "clientAppTypes": ["exchangeActiveSync", "other"]
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["block"]
+  },
+  "_deployment_note": "clientAppTypes 'other' covers legacy/basic-auth clients Graph groups under that label. Report-only first, same reasoning as CA001 — legacy auth is often still in use by a forgotten service account or an old scanner/printer, and finding that out via a hard block is a bad way to find out."
+}

@@ -29,13 +29,13 @@ Every Bicep file here is compiled with the real Bicep CLI before being committed
 | Phase | Layer | Status |
 |---|---|---|
 | 1 | Foundation (VNet, NSG, Key Vault) | ✅ Complete |
-| 2 | Identity Security (Entra ID, Conditional Access, Defender for Identity) | ⏳ Planned |
-| 3 | Endpoint Security (Defender for Endpoint, Intune) | ⏳ Planned |
-| 4 | SIEM / SOAR (Sentinel, Logic Apps, KQL, ATT&CK mapping) | ⏳ Planned |
-| 5 | Cloud & Network Security (Defender for Cloud, Firewall, WAF, Front Door, DDoS) | ⏳ Planned |
-| 6 | Email, CASB, Data Protection (Defender for O365, Defender for Cloud Apps, Purview) | ⏳ Planned |
-| 7 | Threat Intelligence & AI (Defender TI, Security Copilot) | ⏳ Planned |
-| 8 | Attack Simulations & Runbooks (7 documented scenarios) | ⏳ Planned |
+| 2 | Identity + Endpoint (Entra ID, Conditional Access, Intune, Defender for Identity/Servers) | ✅ Complete |
+| 3 | SIEM / SOAR (Sentinel, Logic Apps, KQL, ATT&CK mapping) | ⏳ Planned |
+| 4 | Cloud & Network Security (Defender for Cloud, Firewall, WAF, Front Door, DDoS) | ⏳ Planned |
+| 5 | Email, CASB, Data Protection (Defender for O365, Defender for Cloud Apps, Purview) | ⏳ Planned |
+| 6 | Threat Intelligence & AI (Defender TI, Security Copilot) | ⏳ Planned |
+| 7 | Attack Simulations & Runbooks (7 documented scenarios) | ⏳ Planned |
+| 8 | Documentation + polish | ⏳ Planned |
 
 <br/>
 
@@ -66,13 +66,53 @@ Zero linter warnings across all 4 files as well.
 
 <br/>
 
+## Phase 2 — Identity + Endpoint
+
+**What's here:**
+- [`bicep/identity/defender-for-identity.bicep`](bicep/identity/defender-for-identity.bicep) — enables Defender for Identity at subscription scope
+- [`bicep/endpoint/defender-for-servers.bicep`](bicep/endpoint/defender-for-servers.bicep) — enables Defender for Servers Plan 2 (the plan that actually includes EDR — P1 doesn't)
+- [`conditional-access/`](conditional-access) — 3 real Microsoft Graph-schema Conditional Access policies (require MFA, block legacy auth, require compliant device for privileged roles) plus a PowerShell deployment script. Documented distinctly from the Bicep resources above: Conditional Access lives in Microsoft Graph/Entra ID, a different control plane from Azure Resource Manager — that distinction is stated, not blurred for a cleaner story
+- [`intune/windows-compliance-baseline.json`](intune/windows-compliance-baseline.json) — the compliance policy CA003 actually depends on (BitLocker, Secure Boot, Defender status, password policy)
+- [`detections/kql/`](detections/kql) — 2 KQL detections for this phase: privileged sign-in from a non-compliant device, and Defender tamper/AV-disable attempts (T1562.001)
+- [`architecture/diagrams/lld-identity-endpoint.svg`](architecture/diagrams/lld-identity-endpoint.svg) — low-level design for this phase
+
+**A real correction made during this phase, not glossed over:** Defender plan resources (`Microsoft.Security/pricings`) initially failed to compile at resource-group scope — the Bicep CLI rejected it with error BCP135, which is how the subscription-scope requirement was caught and fixed, not assumed correct from the start.
+
+**Verified, not just written:**
+```bash
+bash scripts/validate_bicep.sh
+```
+```
+✅ PASS — bicep/endpoint/defender-for-servers.bicep
+✅ PASS — bicep/endpoint/main.bicep
+✅ PASS — bicep/foundation/keyvault.bicep
+✅ PASS — bicep/foundation/main.bicep
+✅ PASS — bicep/foundation/nsg.bicep
+✅ PASS — bicep/foundation/vnet.bicep
+✅ PASS — bicep/identity/defender-for-identity.bicep
+✅ PASS — bicep/identity/main.bicep
+
+8/8 Bicep files compiled clean.
+```
+All 4 JSON policy files (3 Conditional Access + 1 Intune) parse and validate against their documented Microsoft Graph schema fields.
+
+<br/>
+
 ## Deploying (once you have a subscription)
 
 ```bash
+# Phase 1 — resource-group scoped
 az group create --name rg-mse-platform --location eastus
 az deployment group create \
   --resource-group rg-mse-platform \
   --template-file bicep/foundation/main.bicep
+
+# Phase 2 — subscription scoped (Defender plans apply subscription-wide)
+az deployment sub create --location eastus --template-file bicep/identity/main.bicep
+az deployment sub create --location eastus --template-file bicep/endpoint/main.bicep
+
+# Conditional Access + Intune (Microsoft Graph, not Bicep)
+pwsh conditional-access/deploy-conditional-access.ps1
 ```
 
 No subscription was available at build time — see `docs/PRD.md` Section 4 for the exact, honest boundary on what that means for what this repo does and doesn't prove.
