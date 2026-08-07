@@ -1,0 +1,20 @@
+// ATT&CK: T1078.004 — Valid Accounts: Cloud Accounts (privileged role abuse)
+// Tactic: Privilege Escalation
+// Data source: AuditLogs (Azure AD Privileged Identity Management)
+//
+// Detects a Global Administrator (or other Tier-0 role) being activated via
+// PIM without a business justification recorded — orgs that enforce PIM
+// for standing-access reduction usually require a justification field, so
+// an empty one is either a misconfigured policy or someone bypassing the
+// control's intent even while technically using it.
+
+AuditLogs
+| where TimeGenerated > ago(24h)
+| where OperationName == "Add member to role completed (PIM activation)"
+| extend RoleName = tostring(TargetResources[0].modifiedProperties[1].newValue),
+         Justification = tostring(TargetResources[0].modifiedProperties[3].newValue),
+         ActivatedBy = tostring(InitiatedBy.user.userPrincipalName)
+| where RoleName has_any ("Global Administrator", "Privileged Role Administrator")
+| where isempty(Justification) or Justification == "\"\""
+| project TimeGenerated, ActivatedBy, RoleName, Justification
+| extend AlertSeverity = "Medium"

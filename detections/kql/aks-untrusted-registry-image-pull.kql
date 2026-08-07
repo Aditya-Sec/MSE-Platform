@@ -1,0 +1,25 @@
+// ATT&CK: T1204 — User Execution (via T1610 Deploy Container as the enabling step)
+// Tactic: Execution / Initial Access (supply chain angle)
+// Data source: AKS Diagnostic logs (kube-audit category)
+//
+// Detects a pod being created with a container image pulled from a
+// registry outside an explicit allow-list — the AKS equivalent of "don't
+// run software from a source you don't trust," and a real, common
+// supply-chain gap since Kubernetes has no default registry restriction.
+
+let allowedRegistries = dynamic(["yourenterprise.azurecr.io", "mcr.microsoft.com"]);
+AzureDiagnostics
+| where TimeGenerated > ago(1h)
+| where Category == "kube-audit"
+| extend AuditLog = parse_json(log_s)
+| where AuditLog.verb == "create"
+| where AuditLog.objectRef.resource == "pods"
+| extend Images = AuditLog.requestObject.spec.containers
+| mv-expand Images
+| extend ImageRef = tostring(Images.image)
+| where not(ImageRef has_any (allowedRegistries))
+| extend Namespace = tostring(AuditLog.objectRef.namespace),
+         PodName = tostring(AuditLog.objectRef.name),
+         UserName = tostring(AuditLog.user.username)
+| project TimeGenerated, UserName, Namespace, PodName, ImageRef
+| extend AlertSeverity = "Medium"

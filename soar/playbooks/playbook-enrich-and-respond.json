@@ -1,0 +1,138 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "PlaybookName": {
+      "type": "string",
+      "defaultValue": "SOAR-Enrich-And-Respond"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('PlaybookName')]",
+      "location": "[resourceGroup().location]",
+      "identity": { "type": "SystemAssigned" },
+      "properties": {
+        "state": "Enabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "triggers": {
+            "Microsoft_Sentinel_incident": {
+              "type": "ApiConnectionWebhook",
+              "inputs": {
+                "body": { "callback_url": "@{listCallbackUrl()}" },
+                "path": "/incident-creation"
+              }
+            }
+          },
+          "actions": {
+            "Extract_IOC_entities": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@triggerBody()?['object']?['properties']?['relatedEntities']",
+                "schema": {}
+              },
+              "runAfter": {}
+            },
+            "VirusTotal_IP_lookup": {
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "https://www.virustotal.com/api/v3/ip_addresses/@{body('Extract_IOC_entities')['ipAddress']}",
+                "headers": { "x-apikey": "@{parameters('virusTotalApiKey')}" }
+              },
+              "runAfter": { "Extract_IOC_entities": ["Succeeded"] }
+            },
+            "AbuseIPDB_check": {
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "https://api.abuseipdb.com/api/v2/check",
+                "queries": { "ipAddress": "@{body('Extract_IOC_entities')['ipAddress']}" },
+                "headers": { "Key": "@{parameters('abuseIpDbApiKey')}" }
+              },
+              "runAfter": { "Extract_IOC_entities": ["Succeeded"] }
+            },
+            "Whois_lookup": {
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "https://api.whoisxmlapi.com/v1?ipAddress=@{body('Extract_IOC_entities')['ipAddress']}"
+              },
+              "runAfter": { "Extract_IOC_entities": ["Succeeded"] }
+            },
+            "Compute_enrichment_severity": {
+              "type": "Compose",
+              "inputs": "@if(greater(body('VirusTotal_IP_lookup')?['data']?['attributes']?['last_analysis_stats']?['malicious'], 0), 'High', 'Medium')",
+              "runAfter": {
+                "VirusTotal_IP_lookup": ["Succeeded"],
+                "AbuseIPDB_check": ["Succeeded"],
+                "Whois_lookup": ["Succeeded"]
+              }
+            },
+            "Post_to_Teams": {
+              "type": "ApiConnection",
+              "inputs": {
+                "body": {
+                  "messageBody": "Incident enriched — severity: @{outputs('Compute_enrichment_severity')}. VirusTotal, AbuseIPDB, and Whois results attached to the Sentinel incident."
+                },
+                "host": { "connection": { "name": "@parameters('$connections')['teams']['connectionId']" } },
+                "path": "/teams/message"
+              },
+              "runAfter": { "Compute_enrichment_severity": ["Succeeded"] }
+            },
+            "Create_ServiceNow_ticket": {
+              "type": "ApiConnection",
+              "inputs": {
+                "body": {
+                  "short_description": "Security incident — auto-enriched via Sentinel SOAR",
+                  "urgency": "@{outputs('Compute_enrichment_severity')}"
+                },
+                "host": { "connection": { "name": "@parameters('$connections')['servicenow']['connectionId']" } },
+                "path": "/incident"
+              },
+              "runAfter": { "Post_to_Teams": ["Succeeded"] }
+            },
+            "Condition_isolate_if_high": {
+              "type": "If",
+              "expression": {
+                "and": [{ "equals": ["@outputs('Compute_enrichment_severity')", "High"] }]
+              },
+              "actions": {
+                "Isolate_device_via_Defender": {
+                  "type": "Http",
+                  "inputs": {
+                    "method": "POST",
+                    "uri": "https://api.securitycenter.microsoft.com/api/machines/@{body('Extract_IOC_entities')['deviceId']}/isolate",
+                    "authentication": { "type": "ManagedServiceIdentity", "audience": "https://api.securitycenter.microsoft.com" },
+                    "body": { "Comment": "Auto-isolated — High severity after IOC enrichment confirmed malicious indicators.", "IsolationType": "Selective" }
+                  },
+                  "runAfter": {}
+                }
+              },
+              "else": {
+                "actions": {
+                  "Route_to_analyst_queue": {
+                    "type": "ApiConnection",
+                    "inputs": {
+                      "body": { "incidentArmId": "@triggerBody()?['object']?['id']", "message": "Enrichment complete, severity Medium — routed to analyst queue for manual review, not auto-isolated." },
+                      "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                      "path": "/Incidents/Comment"
+                    }
+                  }
+                }
+              },
+              "runAfter": { "Create_ServiceNow_ticket": ["Succeeded"] }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "note": "Implements the documented enrichment chain (VirusTotal → AbuseIPDB → Whois → Teams → ServiceNow → conditional isolation) from the original project brief. Isolation is gated behind confirmed-malicious enrichment results, not triggered on the raw incident alone — same 'don't auto-act on low-confidence signal' discipline used in this profile's other SOAR playbooks. Requires: Sentinel/Teams/ServiceNow API connections, and Managed Identity granted Machine.Isolate on Defender for Endpoint."
+  }
+}

@@ -1,0 +1,14 @@
+// ATT&CK: T1566.002 — Phishing: Spearphishing Link
+// Tactic: Initial Access
+// Data source: UrlClickEvents (Defender for Office 365 Safe Links)
+//
+// Detects a user clicking through a Safe Links warning page anyway (or a
+// link that Safe Links later reclassified as malicious after the click
+// already happened) — the highest-priority phishing signal available,
+// since it confirms both delivery AND user interaction, not just delivery.
+
+UrlClickEvents
+| where TimeGenerated > ago(24h)
+| where IsClickedThrough == true or ThreatTypes has "Phish" or ThreatTypes has "Malware"
+| project TimeGenerated, AccountUpn, Url, ThreatTypes, IsClickedThrough, NetworkMessageId
+| extend AlertSeverity = "Critical"

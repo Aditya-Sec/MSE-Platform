@@ -1,0 +1,107 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "PlaybookName": {
+      "type": "string",
+      "defaultValue": "SOAR-Disable-Compromised-User"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2019-05-01",
+      "name": "[parameters('PlaybookName')]",
+      "location": "[resourceGroup().location]",
+      "identity": { "type": "SystemAssigned" },
+      "properties": {
+        "state": "Enabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "triggers": {
+            "Microsoft_Sentinel_incident": {
+              "type": "ApiConnectionWebhook",
+              "inputs": {
+                "body": { "callback_url": "@{listCallbackUrl()}" },
+                "path": "/incident-creation"
+              }
+            }
+          },
+          "actions": {
+            "Parse_incident_entities": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@triggerBody()?['object']?['properties']?['relatedEntities']",
+                "schema": {}
+              },
+              "runAfter": {}
+            },
+            "Condition_source_rule_is_identity_attack": {
+              "type": "If",
+              "expression": {
+                "or": [
+                  { "contains": ["@triggerBody()?['object']?['properties']?['alertProductNames']", "password-spray-pattern"] },
+                  { "contains": ["@triggerBody()?['object']?['properties']?['alertProductNames']", "identity-lateral-movement-enriched"] },
+                  { "contains": ["@triggerBody()?['object']?['properties']?['alertProductNames']", "guest-user-privilege-escalation"] }
+                ]
+              },
+              "actions": {
+                "Disable_user_via_Graph": {
+                  "type": "Http",
+                  "inputs": {
+                    "method": "PATCH",
+                    "uri": "https://graph.microsoft.com/v1.0/users/@{body('Parse_incident_entities')['userPrincipalName']}",
+                    "authentication": { "type": "ManagedServiceIdentity", "audience": "https://graph.microsoft.com" },
+                    "body": { "accountEnabled": false }
+                  },
+                  "runAfter": {}
+                },
+                "Revoke_all_sign_in_sessions": {
+                  "type": "Http",
+                  "inputs": {
+                    "method": "POST",
+                    "uri": "https://graph.microsoft.com/v1.0/users/@{body('Parse_incident_entities')['userPrincipalName']}/revokeSignInSessions",
+                    "authentication": { "type": "ManagedServiceIdentity", "audience": "https://graph.microsoft.com" }
+                  },
+                  "runAfter": { "Disable_user_via_Graph": ["Succeeded"] }
+                },
+                "Add_incident_comment_disabled": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "body": {
+                      "incidentArmId": "@triggerBody()?['object']?['id']",
+                      "message": "Auto-response: account disabled and all sessions revoked — triggered by an identity-attack-pattern detection (password spray / lateral movement / guest privilege escalation), not a generic alert. Review before re-enabling."
+                    },
+                    "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                    "path": "/Incidents/Comment"
+                  },
+                  "runAfter": { "Revoke_all_sign_in_sessions": ["Succeeded"] }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Add_incident_comment_routed": {
+                    "type": "ApiConnection",
+                    "inputs": {
+                      "body": {
+                        "incidentArmId": "@triggerBody()?['object']?['id']",
+                        "message": "Incident did not match an identity-attack detection pattern this playbook auto-responds to — routed to analyst queue instead of auto-disabling."
+                      },
+                      "host": { "connection": { "name": "@parameters('$connections')['azuresentinel']['connectionId']" } },
+                      "path": "/Incidents/Comment"
+                    }
+                  }
+                }
+              },
+              "runAfter": { "Parse_incident_entities": ["Succeeded"] }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "note": "Deliberately gated on the SPECIFIC source detection rule name, not just any Sentinel incident — this playbook only auto-disables an account when the triggering rule is one of the three identity-attack detections it's designed to respond to (password-spray-pattern, identity-lateral-movement-enriched, guest-user-privilege-escalation), matching the 'Impossible Travel → Disable User' scenario from the original project brief. Requires: Managed Identity granted User.ReadWrite.All and User-Revoke permissions on Microsoft Graph."
+  }
+}

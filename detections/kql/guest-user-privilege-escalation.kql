@@ -1,0 +1,25 @@
+// ATT&CK: T1136.003 — Create Account: Cloud Account (cross-tenant variant)
+// Tactic: Persistence / Privilege Escalation
+// Data source: AuditLogs (Azure AD)
+//
+// Detects a B2B guest account (external tenant identity) being added to
+// any privileged directory role — guests are meant for scoped collaboration
+// access, not administrative roles, so this should almost never fire
+// legitimately, which makes it a high-confidence rule with a low expected
+// false-positive rate.
+
+let privilegedRoles = dynamic([
+    "Global Administrator", "Privileged Role Administrator",
+    "User Administrator", "Application Administrator",
+    "Cloud Application Administrator"
+]);
+AuditLogs
+| where TimeGenerated > ago(24h)
+| where OperationName == "Add member to role"
+| extend TargetUserType = tostring(TargetResources[0].userPrincipalName)
+| where TargetUserType has "#EXT#"  // B2B guest UPN pattern
+| extend RoleName = tostring(TargetResources[0].modifiedProperties[1].newValue),
+         InitiatedByUser = tostring(InitiatedBy.user.userPrincipalName)
+| where RoleName has_any (privilegedRoles)
+| project TimeGenerated, InitiatedByUser, TargetUserType, RoleName
+| extend AlertSeverity = "Critical"

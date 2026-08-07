@@ -1,0 +1,18 @@
+// ATT&CK: T1071.004 — Application Layer Protocol: DNS
+// Tactic: Command and Control
+// Data source: DeviceNetworkEvents (Defender for Endpoint DNS telemetry)
+//
+// Detects a device making a high volume of DNS queries concentrated on a
+// small number of distinct domains — the shape of DNS-based C2 beaconing,
+// distinct from normal browsing (many domains, irregular volume). Volume
+// alone isn't sufficient signal (legitimate sync/telemetry apps also poll
+// frequently), so this pairs high query count with low domain diversity.
+
+DeviceNetworkEvents
+| where TimeGenerated > ago(2h)
+| where ActionType == "ConnectionSuccess" and RemotePort == 53
+| summarize QueryCount = count(), DistinctDomains = dcount(RemoteUrl)
+          by DeviceName, bin(TimeGenerated, 2h)
+| where QueryCount >= 50 and DistinctDomains <= 3
+| project DeviceName, TimeGenerated, QueryCount, DistinctDomains
+| extend AlertSeverity = "Medium"

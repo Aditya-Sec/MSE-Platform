@@ -1,0 +1,116 @@
+{
+  "name": "MSE-Platform \u2014 Detection Coverage",
+  "versions": {
+    "attack": "16",
+    "navigator": "5.1",
+    "layer": "4.5"
+  },
+  "domain": "enterprise-attack",
+  "description": "Auto-generated from KQL rule headers across all phases of this repo.",
+  "techniques": [
+    {
+      "techniqueID": "T1611",
+      "color": "#4dd4e8",
+      "comment": "Covered by: aks-privileged-container-creation.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1609",
+      "color": "#4dd4e8",
+      "comment": "Covered by: aks-suspicious-pod-exec.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1204",
+      "color": "#4dd4e8",
+      "comment": "Covered by: aks-untrusted-registry-image-pull.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1098.001",
+      "color": "#4dd4e8",
+      "comment": "Covered by: app-registration-new-credential.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1562.001",
+      "color": "#4dd4e8",
+      "comment": "Covered by: defender-tamper-attempt.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1071.004",
+      "color": "#4dd4e8",
+      "comment": "Covered by: dns-c2-beaconing-pattern.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1136.003",
+      "color": "#4dd4e8",
+      "comment": "Covered by: guest-user-privilege-escalation.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1550.002",
+      "color": "#4dd4e8",
+      "comment": "Covered by: identity-lateral-movement-enriched.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1114.003",
+      "color": "#4dd4e8",
+      "comment": "Covered by: mailbox-external-autoforward-rule.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1110.003",
+      "color": "#4dd4e8",
+      "comment": "Covered by: password-spray-pattern.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1078.004",
+      "color": "#4dd4e8",
+      "comment": "Covered by: pim-activation-missing-justification.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1567",
+      "color": "#4dd4e8",
+      "comment": "Covered by: purview-confidential-file-external-share.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1566.002",
+      "color": "#4dd4e8",
+      "comment": "Covered by: safelinks-clickthrough-despite-warning.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1608.001",
+      "color": "#4dd4e8",
+      "comment": "Covered by: storage-malware-upload.kql",
+      "enabled": true
+    },
+    {
+      "techniqueID": "T1190",
+      "color": "#4dd4e8",
+      "comment": "Covered by: waf-sql-injection-burst.kql",
+      "enabled": true
+    }
+  ],
+  "gradient": {
+    "colors": [
+      "#0d1012",
+      "#4dd4e8"
+    ],
+    "minValue": 0,
+    "maxValue": 1
+  },
+  "legendItems": [
+    {
+      "label": "Covered by this project",
+      "color": "#4dd4e8"
+    }
+  ]
+}

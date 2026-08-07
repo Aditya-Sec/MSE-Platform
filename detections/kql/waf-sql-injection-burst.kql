@@ -1,0 +1,23 @@
+// ATT&CK: T1190 — Exploit Public-Facing Application
+// Tactic: Initial Access
+// Data source: AzureDiagnostics (Application Gateway WAF logs)
+//
+// Detects Azure WAF (on Application Gateway or Front Door) blocking a
+// request matching SQL injection rule groups — signal that someone is
+// actively probing a public-facing app, not just a single blocked request.
+//
+// False positive notes: security scanners and pentest tools generate the
+// same signature matches. Correlate source IP against known scanner/pentest
+// IP ranges before escalating; a single hit is noise, a sustained pattern
+// from one source is the actual signal (see the burst threshold below).
+
+AzureDiagnostics
+| where TimeGenerated > ago(1h)
+| where ResourceType == "APPLICATIONGATEWAYS" and Category == "ApplicationGatewayFirewallLog"
+| where action_s == "Blocked"
+| where ruleGroup_s has "SQLI" or ruleSetType_s == "OWASP"
+| summarize BlockedRequests = count(), Rules = make_set(ruleId_s, 10)
+          by bin(TimeGenerated, 5m), clientIp_s, hostname_s
+| where BlockedRequests >= 5  // burst threshold — filters single scanner noise
+| extend AlertSeverity = "High"
+| project TimeGenerated, clientIp_s, hostname_s, BlockedRequests, Rules, AlertSeverity

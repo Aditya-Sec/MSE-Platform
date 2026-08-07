@@ -1,0 +1,25 @@
+// ATT&CK: T1611 — Escape to Host
+// Tactic: Privilege Escalation
+// Data source: AKS Diagnostic logs (kube-audit category)
+//
+// Detects a pod being created with privileged: true or hostPID/hostNetwork
+// enabled — configurations that allow a container to escape its isolation
+// and interact directly with the underlying node, the primary technique
+// for container-to-host breakout.
+
+AzureDiagnostics
+| where TimeGenerated > ago(1h)
+| where Category == "kube-audit"
+| extend AuditLog = parse_json(log_s)
+| where AuditLog.verb == "create"
+| where AuditLog.objectRef.resource == "pods"
+| extend PodSpec = AuditLog.requestObject.spec
+| extend Privileged = tostring(PodSpec.containers[0].securityContext.privileged),
+         HostPID = tostring(PodSpec.hostPID),
+         HostNetwork = tostring(PodSpec.hostNetwork),
+         UserName = tostring(AuditLog.user.username),
+         Namespace = tostring(AuditLog.objectRef.namespace),
+         PodName = tostring(AuditLog.objectRef.name)
+| where Privileged == "true" or HostPID == "true" or HostNetwork == "true"
+| project TimeGenerated, UserName, Namespace, PodName, Privileged, HostPID, HostNetwork
+| extend AlertSeverity = "High"

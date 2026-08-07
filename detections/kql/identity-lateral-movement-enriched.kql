@@ -1,0 +1,23 @@
+// ATT&CK: T1550.002 — Use Alternate Authentication Material: Pass the Hash
+//         (also covers T1558 Kerberoasting / Golden Ticket via alert name match)
+// Tactic: Lateral Movement / Credential Access
+// Data source: SecurityAlert (Defender for Identity)
+//
+// Defender for Identity has its own ML-based detection for these techniques
+// — this rule doesn't reimplement that detection logic (that would be
+// redundant and worse than Microsoft's own), it correlates the alert into
+// Sentinel's incident queue and enriches it with the affected account's
+// recent sign-in locations, so an analyst has geo-context without a
+// separate manual lookup.
+
+SecurityAlert
+| where TimeGenerated > ago(24h)
+| where ProductName == "Microsoft Defender for Identity"
+| where AlertName has_any ("Pass the hash", "Golden ticket", "Suspected Kerberoasting", "Suspected DCSync")
+| extend CompromisedAccount = tostring(parse_json(Entities)[0].Name)
+| join kind=leftouter (
+    SigninLogs
+    | where TimeGenerated > ago(24h)
+    | summarize RecentLocations = make_set(Location, 5) by UserPrincipalName
+) on $left.CompromisedAccount == $right.UserPrincipalName
+| project TimeGenerated, AlertName, CompromisedAccount, RecentLocations, AlertSeverity

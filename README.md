@@ -30,7 +30,7 @@ Every Bicep file here is compiled with the real Bicep CLI before being committed
 |---|---|---|
 | 1 | Foundation (VNet, NSG, Key Vault) | ✅ Complete |
 | 2 | Identity + Endpoint (Entra ID, Conditional Access, Intune, Defender for Identity/Servers) | ✅ Complete |
-| 3 | SIEM / SOAR (Sentinel, Logic Apps, KQL, ATT&CK mapping) | ⏳ Planned |
+| 3 | SIEM / SOAR (Sentinel, Logic Apps, KQL, ATT&CK mapping) | ✅ Complete |
 | 4 | Cloud & Network Security (Defender for Cloud, Firewall, WAF, Front Door, DDoS) | ⏳ Planned |
 | 5 | Email, CASB, Data Protection (Defender for O365, Defender for Cloud Apps, Purview) | ⏳ Planned |
 | 6 | Threat Intelligence & AI (Defender TI, Security Copilot) | ⏳ Planned |
@@ -98,6 +98,25 @@ All 4 JSON policy files (3 Conditional Access + 1 Intune) parse and validate aga
 
 <br/>
 
+## Phase 3 — SIEM / SOAR core
+
+**What's here:**
+- [`bicep/siem-soar/sentinel-workspace.bicep`](bicep/siem-soar/sentinel-workspace.bicep) — Log Analytics workspace + Sentinel onboarding deployed together (Sentinel is a solution enabled *on* a workspace, not a standalone resource — the module reflects that instead of treating them as separate layers)
+- [`detections/kql/`](detections/kql) — 17 more KQL detections added this phase (19 total across the project), spanning identity, endpoint, cloud/container, email, and data-protection sources — because Sentinel is the central SIEM regardless of which layer a signal originates from
+- [`detections/generate_attack_coverage.py`](detections/generate_attack_coverage.py) — parses every rule's ATT&CK header and generates a real Navigator layer, run and verified: **15 techniques covered**, 2 rules intentionally excluded and named (one uses a NIST CSF tag instead since it detects posture drift, not an attack technique; one is a Conditional-Access control-effectiveness check)
+- [`soar/playbooks/`](soar/playbooks) — 2 real Logic App templates:
+  - `playbook-enrich-and-respond.json` — the documented enrichment chain (VirusTotal → AbuseIPDB → Whois → Teams → ServiceNow), with device isolation gated behind *confirmed-malicious* enrichment results, not the raw incident alone
+  - `playbook-disable-compromised-user.json` — gated on the *specific source detection rule* (password spray / lateral movement / guest privilege escalation), not any generic incident, matching the "Impossible Travel → Disable User" scenario from the original brief
+
+**Verified, not just written:**
+```bash
+bash scripts/validate_bicep.sh          # 10/10 Bicep files compiled clean
+python3 detections/generate_attack_coverage.py   # 15 techniques extracted, real Navigator layer written
+```
+Both SOAR playbook JSON files parse and validate; both are deliberately gated on high-confidence conditions rather than auto-acting on a raw incident, matching the "human-in-the-loop for destructive actions" discipline used throughout the rest of this profile's SOAR work.
+
+<br/>
+
 ## Deploying (once you have a subscription)
 
 ```bash
@@ -113,6 +132,14 @@ az deployment sub create --location eastus --template-file bicep/endpoint/main.b
 
 # Conditional Access + Intune (Microsoft Graph, not Bicep)
 pwsh conditional-access/deploy-conditional-access.ps1
+
+# Phase 3 — resource-group scoped (Sentinel workspace)
+az deployment group create \
+  --resource-group rg-mse-platform \
+  --template-file bicep/siem-soar/main.bicep
+
+# Logic Apps playbooks require an existing Sentinel workspace + API connections —
+# see soar/playbooks/*.json "metadata.note" for the exact permissions each needs
 ```
 
 No subscription was available at build time — see `docs/PRD.md` Section 4 for the exact, honest boundary on what that means for what this repo does and doesn't prove.

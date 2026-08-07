@@ -1,0 +1,23 @@
+// ATT&CK: T1567 — Exfiltration Over Web Service
+// Tactic: Exfiltration / Collection (insider threat scenario)
+// Data source: OfficeActivity (SharePoint/OneDrive) + Purview sensitivity labels
+//
+// Detects a file carrying a Microsoft Purview sensitivity label of
+// "Confidential" or higher being shared with a user outside the tenant's
+// verified domains — a different signal from a generic mass-download rule:
+// this one keys on the label itself, which is the actual data-classification
+// signal Purview exists to provide, catching a single sensitive file leaving
+// even when volume-based rules wouldn't fire on one file.
+
+let confidentialLabels = dynamic(["Confidential", "Highly Confidential", "Restricted"]);
+let internalDomains = dynamic(["yourcompany.com"]); // replace with real verified domains
+OfficeActivity
+| where TimeGenerated > ago(24h)
+| where RecordType == "SharePointSharingOperation"
+| where Operation in ("SharingSet", "AnonymousLinkCreated", "SecureLinkCreated")
+| extend SensitivityLabel = tostring(parse_json(EventData).SensitivityLabel)
+| where SensitivityLabel in (confidentialLabels)
+| extend TargetUserOrDomain = tostring(TargetUserOrGroupName)
+| where not(TargetUserOrDomain has_any (internalDomains))
+| project TimeGenerated, UserId, TargetUserOrDomain, SensitivityLabel, Operation, OfficeObjectId
+| extend AlertSeverity = "High"

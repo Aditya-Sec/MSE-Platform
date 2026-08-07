@@ -1,0 +1,20 @@
+// ATT&CK: T1114.003 — Email Collection: Email Forwarding Rule
+// Tactic: Collection (Business Email Compromise precursor)
+// Data source: OfficeActivity (Exchange Online)
+//
+// Detects a new inbox rule that auto-forwards mail to an external address
+// — one of the most common post-compromise BEC actions, since it gives an
+// attacker ongoing visibility into a mailbox without needing to log in
+// again after the initial compromise.
+
+let internalDomains = dynamic(["yourcompany.com"]); // replace with real verified domains
+OfficeActivity
+| where TimeGenerated > ago(24h)
+| where RecordType == "ExchangeAdmin" or Operation == "New-InboxRule"
+| where Operation in ("New-InboxRule", "Set-InboxRule")
+| extend Parameters = parse_json(Parameters)
+| mv-apply p = Parameters on (where p.Name == "ForwardTo" or p.Name == "RedirectTo")
+| extend ForwardTarget = tostring(p.Value)
+| where isnotempty(ForwardTarget) and not(ForwardTarget has_any (internalDomains))
+| project TimeGenerated, UserId, ForwardTarget, Operation
+| extend AlertSeverity = "High"

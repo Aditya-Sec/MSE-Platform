@@ -1,0 +1,26 @@
+// ATT&CK: T1609 — Container Administration Command
+// Tactic: Execution
+// Data source: AKS Diagnostic logs (kube-audit category)
+//
+// Detects a user (not a service account) running `kubectl exec` into a
+// running pod — a common way to get interactive shell access inside a
+// container for both legitimate debugging and post-compromise lateral
+// movement, which is exactly why the signal alone isn't enough context;
+// this rule surfaces it for review, not for auto-response.
+//
+// False positive notes: engineers legitimately exec into pods to debug.
+// Tune by excluding known break-glass/debug service accounts, and weight
+// severity higher for exec into production-namespace pods specifically.
+
+AzureDiagnostics
+| where TimeGenerated > ago(1h)
+| where Category == "kube-audit"
+| extend AuditLog = parse_json(log_s)
+| where AuditLog.verb == "create"
+| where AuditLog.objectRef.resource == "pods" and AuditLog.objectRef.subresource == "exec"
+| extend UserName = tostring(AuditLog.user.username),
+         Namespace = tostring(AuditLog.objectRef.namespace),
+         PodName = tostring(AuditLog.objectRef.name)
+| where UserName !endswith "system:serviceaccount"  // exclude automated service accounts
+| project TimeGenerated, UserName, Namespace, PodName
+| extend AlertSeverity = iff(Namespace == "production", "High", "Medium")

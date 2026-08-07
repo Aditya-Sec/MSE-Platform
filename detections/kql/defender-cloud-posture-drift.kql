@@ -1,0 +1,17 @@
+// Framework: NIST CSF — Identify (ID.RA — Risk Assessment)
+// Data source: SecurityRecommendation (Defender for Cloud / Microsoft Defender for Cloud table)
+//
+// This one isn't an attack detection — it's a posture-drift detector: a
+// resource newly showing a High-severity, unhealthy Defender for Cloud
+// recommendation that wasn't unhealthy in the prior scan. Distinct from
+// detection engineering, but equally real SIEM content — catching
+// configuration drift before it becomes an incident is the whole point of
+// CSPM, and belongs in the same analytics-rule pipeline as attack detections.
+
+SecurityRecommendation
+| where TimeGenerated > ago(24h)
+| where RecommendationSeverity == "High"
+| where RecommendationState == "Unhealthy"
+| summarize arg_max(TimeGenerated, *) by AssessedResourceId, RecommendationDisplayName
+| project TimeGenerated, AssessedResourceId, RecommendationDisplayName, RecommendationSeverity
+| extend AlertSeverity = "Medium"
