@@ -31,7 +31,7 @@ Every Bicep file here is compiled with the real Bicep CLI before being committed
 | 1 | Foundation (VNet, NSG, Key Vault) | ✅ Complete |
 | 2 | Identity + Endpoint (Entra ID, Conditional Access, Intune, Defender for Identity/Servers) | ✅ Complete |
 | 3 | SIEM / SOAR (Sentinel, Logic Apps, KQL, ATT&CK mapping) | ✅ Complete |
-| 4 | Cloud & Network Security (Defender for Cloud, Firewall, WAF, Front Door, DDoS) | ⏳ Planned |
+| 4 | Cloud & Network Security (Defender for Cloud, Firewall, WAF, Front Door, DDoS) | ✅ Complete |
 | 5 | Email, CASB, Data Protection (Defender for O365, Defender for Cloud Apps, Purview) | ⏳ Planned |
 | 6 | Threat Intelligence & AI (Defender TI, Security Copilot) | ⏳ Planned |
 | 7 | Attack Simulations & Runbooks (7 documented scenarios) | ⏳ Planned |
@@ -39,7 +39,7 @@ Every Bicep file here is compiled with the real Bicep CLI before being committed
 
 <br/>
 
-## Phase 1 — Foundation (this phase)
+## Phase 1 — Foundation
 
 **What's here:**
 - [`bicep/foundation/vnet.bicep`](bicep/foundation/vnet.bicep) — VNet (10.10.0.0/16) with 7 subnets, including the exact-name-required `AzureFirewallSubnet` and `AzureBastionSubnet` that later phases depend on
@@ -117,6 +117,29 @@ Both SOAR playbook JSON files parse and validate; both are deliberately gated on
 
 <br/>
 
+## Phase 4 — Cloud & Network Security
+
+**What's here:**
+- [`bicep/cloud-network-security/firewall-rules.bicep`](bicep/cloud-network-security/firewall-rules.bicep) — Azure Firewall Premium, deployed into the exact `AzureFirewallSubnet` reserved back in Phase 1 (this is what that reservation was for). Policy-based rule management with real network + application rule collections, threat intel in Alert-only mode as the starting posture — same "don't hard-block on day one" discipline used for Conditional Access in Phase 2
+- [`front-door-waf.bicep`](bicep/cloud-network-security/front-door-waf.bicep) — Front Door Premium with a WAF policy running Microsoft's Default Ruleset (OWASP coverage) in **Prevention** mode — a deliberately different posture than the Firewall's Alert-only threat intel, reasoned about explicitly in the file's comments, not just copy-pasted
+- [`ddos-protection.bicep`](bicep/cloud-network-security/ddos-protection.bicep) — DDoS Protection Plan, with the VNet-association step correctly identified as living on the Phase 1 VNet resource rather than modeled as a separate (nonexistent) attachment resource
+- [`bastion.bicep`](bicep/cloud-network-security/bastion.bicep) — Azure Bastion into the reserved `AzureBastionSubnet` — the actual service that makes Phase 1's "RDP/SSH from Bastion subnet only" NSG rules meaningful, rather than a rule pointing at nothing
+- [`defender-for-cloud.bicep`](bicep/cloud-network-security/defender-for-cloud.bicep) — Defender for Storage (with on-upload malware scanning, wired to Phase 3's `storage-malware-upload.kql`), SQL, Containers, and the CSPM plan tier
+
+**Two orchestrators, not one — and that's deliberate:** `main.bicep` (resource-group scope: Firewall, Front Door, DDoS, Bastion) and `main-defender.bicep` (subscription scope: Defender plans), matching the exact scope split Azure itself enforces — the same reasoning already established in Phase 2 for identity/endpoint.
+
+**Bugs the real Bicep CLI actually caught during this build** (kept here rather than quietly fixed and forgotten):
+- Two hardcoded-URL linter warnings on the Firewall's allow-listed management FQDNs — properly suppressed with a documented reason rather than reworded to dodge the linter
+- An unused `location` parameter on the Front Door module — removed outright once traced to Front Door resources all being `Global` scope, not resource-group-scoped
+- An unused `vnetId` parameter on the DDoS module — fixed by actually threading it through to an output instead of leaving dead code
+
+**Verified, not just written:**
+```bash
+bash scripts/validate_bicep.sh   # 17/17 Bicep files compiled clean, project-wide
+```
+
+<br/>
+
 ## Deploying (once you have a subscription)
 
 ```bash
@@ -140,9 +163,25 @@ az deployment group create \
 
 # Logic Apps playbooks require an existing Sentinel workspace + API connections —
 # see soar/playbooks/*.json "metadata.note" for the exact permissions each needs
+
+# Phase 4 — resource-group scoped (Firewall, Front Door, DDoS, Bastion) —
+# requires Phase 1's subnet/VNet output IDs as parameters
+az deployment group create \
+  --resource-group rg-mse-platform \
+  --template-file bicep/cloud-network-security/main.bicep \
+  --parameters firewallSubnetId=<phase1-output> bastionSubnetId=<phase1-output> vnetId=<phase1-output>
+
+# Phase 4 — subscription scoped (Defender for Storage/SQL/Containers/CSPM)
+az deployment sub create --location eastus --template-file bicep/cloud-network-security/main-defender.bicep
 ```
 
 No subscription was available at build time — see `docs/PRD.md` Section 4 for the exact, honest boundary on what that means for what this repo does and doesn't prove.
+
+<br/>
+
+## Phase 5 — Email, CASB, Data Protection (next)
+
+Not yet built — Defender for Office 365 (Safe Links/Safe Attachments), Defender for Cloud Apps (CASB), and Microsoft Purview DLP/classification concepts. Two detections already exist ahead of this phase in `detections/kql/` (`mailbox-external-autoforward-rule.kql`, `safelinks-clickthrough-despite-warning.kql`, `purview-confidential-file-external-share.kql`) since all KQL content lives centrally regardless of source layer — see Phase 3.
 
 <br/>
 
