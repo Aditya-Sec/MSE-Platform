@@ -1,0 +1,35 @@
+{
+  "_note": "Sentinel Watchlists are how threat intel actually gets joined against log data in KQL — via the _GetWatchlist() function. This schema defines the watchlist this phase's new detection rule (ti-watchlist-match.kql) queries against.",
+  "watchlistAlias": "ThreatIntelIOCs",
+  "displayName": "MSE-Platform Threat Intel Indicators",
+  "description": "Curated IOC list — IPs, domains, file hashes, URLs — sourced from Defender Threat Intelligence and manually vetted feeds. Joined against SigninLogs, DeviceNetworkEvents, and EmailEvents via _GetWatchlist('ThreatIntelIOCs') in detections/kql/ti-watchlist-match.kql.",
+  "schema": {
+    "IndicatorValue": "string — the IP, domain, hash, or URL itself",
+    "IndicatorType": "string — one of: ip | domain | file_hash | url",
+    "ThreatType": "string — e.g. c2, phishing, malware_distribution",
+    "Confidence": "int — 0-100, sourced from the TI provider's own confidence score",
+    "SourceFeed": "string — where this indicator came from, for provenance",
+    "DateAdded": "datetime",
+    "Expiration": "datetime — IOCs age out; a 2-year-old IP indicator is often noise, not signal"
+  },
+  "sampleRows": [
+    {
+      "IndicatorValue": "185.220.101.45",
+      "IndicatorType": "ip",
+      "ThreatType": "c2",
+      "Confidence": 85,
+      "SourceFeed": "Defender Threat Intelligence",
+      "DateAdded": "2026-06-01T00:00:00Z",
+      "Expiration": "2026-12-01T00:00:00Z"
+    },
+    {
+      "IndicatorValue": "secure-office365-login[.]com",
+      "IndicatorType": "domain",
+      "ThreatType": "phishing",
+      "Confidence": 90,
+      "SourceFeed": "Defender Threat Intelligence",
+      "DateAdded": "2026-06-15T00:00:00Z",
+      "Expiration": "2026-09-15T00:00:00Z"
+    }
+  ]
+}

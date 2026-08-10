@@ -1,0 +1,28 @@
+// Framework: MITRE ATT&CK
+// ATT&CK: T1071 — Application Layer Protocol (C2 communication)
+// Tactic: Command and Control
+// Data source: SigninLogs + DeviceNetworkEvents, joined against the
+// ThreatIntelIOCs Sentinel watchlist (see threat-intelligence/sentinel-ti-watchlist.json)
+//
+// This is the one detection in this project that depends on external
+// data (the watchlist) rather than being self-contained log analysis —
+// worth knowing the distinction: this rule is only as good as watchlist
+// freshness, which is why the watchlist schema has an Expiration field
+// and why graph_ti_indicators_sync.py exists to keep it current.
+//
+// False positive notes: a stale or overly broad IOC (e.g. a shared
+// hosting-provider IP later reused for legitimate services) will false-
+// positive here. Confidence >= 70 filter below is deliberate — lower-
+// confidence indicators are noisier than they're worth for this join.
+
+let ThreatIntelIOCs = _GetWatchlist('ThreatIntelIOCs')
+    | where Confidence >= 70
+    | where Expiration > now();
+
+DeviceNetworkEvents
+| where TimeGenerated > ago(24h)
+| where RemoteIPType == "Public"
+| join kind=inner (ThreatIntelIOCs) on $left.RemoteIP == $right.IndicatorValue
+| where IndicatorType == "ip"
+| project TimeGenerated, DeviceName, RemoteIP, RemotePort, ThreatType, Confidence, SourceFeed
+| extend AlertSeverity = iff(Confidence >= 85, "High", "Medium")

@@ -1,0 +1,8 @@
+{
+  "_note": "Illustrative example of Security Copilot's real 'natural language to KQL' capability, modeled on Microsoft's own documented example pattern — not a captured Copilot session. No live Security Copilot license was available. The point of this file is showing a realistic analyst prompt and the KQL it should map to, validated by hand against this project's own schema, not asserting a real tool ran.",
+  "useCase": "KQL query generation",
+  "analystPrompt": "Show me all sign-ins from outside the usual employee countries in the last 48 hours where MFA was not completed",
+  "expectedGeneratedKQL": "SigninLogs\n| where TimeGenerated > ago(48h)\n| where AuthenticationRequirement != \"multiFactorAuthentication\"\n| where Location !in (\"US\", \"IN\")  // adjust to actual employee geography\n| project TimeGenerated, UserPrincipalName, Location, IPAddress, AppDisplayName, ResultType",
+  "handValidationNote": "This generated query was checked by hand against this project's actual SigninLogs schema usage elsewhere in the repo (see password-spray-pattern.kql and privileged-signin-noncompliant-device.kql) to confirm field names and logic are realistic, not just plausible-sounding.",
+  "whyThisMatters": "Microsoft's own reporting cites a 70-85% reduction in time spent authoring KQL for analysts using this capability — the practical value isn't that Copilot replaces detection engineering skill, it's that it removes syntax friction so the analyst's judgment (which fields matter, what the real question is) is the bottleneck, not KQL recall."
+}

@@ -33,7 +33,7 @@ Every Bicep file here is compiled with the real Bicep CLI before being committed
 | 3 | SIEM / SOAR (Sentinel, Logic Apps, KQL, ATT&CK mapping) | ✅ Complete |
 | 4 | Cloud & Network Security (Defender for Cloud, Firewall, WAF, Front Door, DDoS) | ✅ Complete |
 | 5 | Email, CASB, Data Protection (Defender for O365, Defender for Cloud Apps, Purview) | ✅ Complete |
-| 6 | Threat Intelligence & AI (Defender TI, Security Copilot) | ⏳ Planned |
+| 6 | Threat Intelligence & AI (Defender TI, Security Copilot) | ✅ Complete |
 | 7 | Attack Simulations & Runbooks (7 documented scenarios) | ⏳ Planned |
 | 8 | Documentation + polish | ⏳ Planned |
 
@@ -178,6 +178,9 @@ az deployment sub create --location eastus --template-file bicep/cloud-network-s
 pwsh email-security/deploy-email-security.ps1
 python3 casb/deploy_casb_policies.py          # set CLOUDAPPS_TENANT_URL + CLOUDAPPS_API_TOKEN to deploy for real
 pwsh data-protection/deploy-purview-policies.ps1
+
+# Phase 6 — threat intel sync (no Bicep; Graph API)
+python3 threat-intelligence/graph_ti_indicators_sync.py   # set GRAPH_ACCESS_TOKEN to submit for real
 ```
 
 No subscription was available at build time — see `docs/PRD.md` Section 4 for the exact, honest boundary on what that means for what this repo does and doesn't prove.
@@ -209,9 +212,23 @@ Both CASB policies print a real, correctly-shaped API request in dry-run mode. A
 
 <br/>
 
-## Phase 6 — Threat Intelligence & AI (next)
+## Phase 6 — Threat Intelligence & AI
 
-Not yet built — Defender Threat Intelligence integration and Security Copilot use-case documentation (KQL generation, incident summarization, MITRE mapping).
+**Threat intelligence:**
+- [`threat-intelligence/sentinel-ti-watchlist.json`](threat-intelligence/sentinel-ti-watchlist.json) — schema for the `ThreatIntelIOCs` Sentinel watchlist (IPs, domains, hashes, URLs), including an `Expiration` field — stale IOCs are noise, not signal, and this is designed around that
+- [`threat-intelligence/graph_ti_indicators_sync.py`](threat-intelligence/graph_ti_indicators_sync.py) — submits indicators via the real Microsoft Graph Security `tiIndicators` API, mapping this project's watchlist schema to Microsoft's actual field names (`networkIPv4`, `domainName`, `tlpLevel`, etc.), not invented ones. Verified live in dry-run mode, producing correctly-shaped API requests.
+- [`detections/kql/ti-watchlist-match.kql`](detections/kql/ti-watchlist-match.kql) — the one detection in this project that depends on external data rather than self-contained log analysis, using Sentinel's real `_GetWatchlist()` join pattern. Picked up automatically by Phase 3's `generate_attack_coverage.py` with zero code changes — **16 techniques now covered, up from 15** — proving the cross-phase tooling genuinely composes rather than needing to be re-wired each phase.
+
+**Security Copilot — read this framing first:** no live Security Copilot license was available, so nothing in [`security-copilot/`](security-copilot) is a captured session. Every file states that boundary explicitly rather than implying otherwise.
+- [`security-copilot/promptbook-password-spray-investigation.json`](security-copilot/promptbook-password-spray-investigation.json) — modeled on Microsoft's real, documented "Microsoft Sentinel incident investigation" promptbook, applied to this project's own password-spray detection, with SCU cost estimates cited from Microsoft's published pricing tiers
+- [`security-copilot/kql-generation-example.json`](security-copilot/kql-generation-example.json) — a natural-language-to-KQL example, hand-validated against this project's own schema usage elsewhere, not just plausible-sounding
+- [`security-copilot/use-cases.md`](security-copilot/use-cases.md) — all 6 major use cases mapped to something concrete in this repo, plus the real SCU cost model
+
+<br/>
+
+## Phase 7 — Attack Simulations & Runbooks (next)
+
+Not yet built — full incident-response runbooks for the 7 documented attack scenarios (identity attack, ransomware, web attack, malware upload, phishing, Kubernetes attack, insider threat).
 
 <br/>
 

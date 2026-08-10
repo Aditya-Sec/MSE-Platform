@@ -93,6 +93,12 @@
       "enabled": true
     },
     {
+      "techniqueID": "T1071",
+      "color": "#4dd4e8",
+      "comment": "Covered by: ti-watchlist-match.kql",
+      "enabled": true
+    },
+    {
       "techniqueID": "T1190",
       "color": "#4dd4e8",
       "comment": "Covered by: waf-sql-injection-burst.kql",
