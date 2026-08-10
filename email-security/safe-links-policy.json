@@ -1,0 +1,21 @@
+{
+  "_note": "Defender for Office 365 Safe Links is an Exchange Online Protection policy, not an ARM/Bicep resource — deployed via the ExchangeOnlineManagement PowerShell module's New-SafeLinksPolicy cmdlet. This file documents the exact parameters that script applies; see deploy-email-security.ps1.",
+  "policyName": "MSE-SafeLinks-AllUsers",
+  "description": "Time-of-click URL rewriting and scanning for all users — the direct mitigation for the safelinks-clickthrough-despite-warning.kql detection, which only fires when a user proceeds past this policy's own warning page.",
+  "settings": {
+    "EnableSafeLinksForEmail": true,
+    "EnableSafeLinksForTeams": true,
+    "EnableSafeLinksForOffice": true,
+    "TrackClicks": true,
+    "AllowClickThrough": false,
+    "ScanUrls": true,
+    "EnableForInternalSenders": true,
+    "DeliverMessageAfterScan": true,
+    "DisableUrlRewrite": false,
+    "custom_note": "AllowClickThrough=false is the deliberate hardening choice — the default Microsoft setting actually allows click-through with a warning. Setting it false means a malicious link is blocked outright, not just discouraged, which removes the exact 'user clicked through anyway' scenario the detection rule exists to catch as a secondary control."
+  },
+  "appliesTo": {
+    "recipientDomains": ["*"],
+    "exceptions": ["security-testing-mailbox@domain.example — excluded so phishing simulation campaigns aren't blocked"]
+  }
+}

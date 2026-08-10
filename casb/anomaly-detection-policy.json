@@ -1,0 +1,27 @@
+{
+  "_note": "Defender for Cloud Apps (CASB) policies are configured via its own REST API or admin portal, not ARM/Bicep or Exchange PowerShell — a third distinct deployment surface in this same phase, which is itself worth being able to explain: three different Microsoft security products, three different configuration planes (ARM, Exchange PowerShell, Cloud Apps API), because they have different architectural heritages within Microsoft's portfolio.",
+  "policyName": "MSE-Anomaly-ImpossibleTravel-MassDownload",
+  "policyType": "anomaly_detection",
+  "description": "Tunes CASB's built-in impossible-travel and mass-download anomaly models — the CASB-side counterpart to this project's identity-lateral-movement-enriched.kql Sentinel detection, watching SaaS app usage specifically (Dropbox, Salesforce, Google Workspace, Box) rather than Azure AD sign-ins.",
+  "monitoredApps": ["Dropbox", "GitHub", "Salesforce", "Google Workspace", "Box"],
+  "settings": {
+    "impossibleTravel": {
+      "enabled": true,
+      "sensitivity": "Medium",
+      "excludeVpnRanges": true
+    },
+    "massDownload": {
+      "enabled": true,
+      "thresholdFilesPerHour": 100,
+      "custom_note": "Same threshold reasoning as the mass-file-exfiltration detection in this profile's Sentinel-Detection-Response-Pack, applied here to SaaS apps instead of SharePoint/OneDrive"
+    },
+    "shadowItDiscovery": {
+      "enabled": true,
+      "riskThresholdForAlert": "High"
+    }
+  },
+  "governanceAction": {
+    "onHighConfidence": "Suspend user session, notify SOC",
+    "onMediumConfidence": "Alert only, route to analyst queue"
+  }
+}

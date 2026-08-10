@@ -32,7 +32,7 @@ Every Bicep file here is compiled with the real Bicep CLI before being committed
 | 2 | Identity + Endpoint (Entra ID, Conditional Access, Intune, Defender for Identity/Servers) | ✅ Complete |
 | 3 | SIEM / SOAR (Sentinel, Logic Apps, KQL, ATT&CK mapping) | ✅ Complete |
 | 4 | Cloud & Network Security (Defender for Cloud, Firewall, WAF, Front Door, DDoS) | ✅ Complete |
-| 5 | Email, CASB, Data Protection (Defender for O365, Defender for Cloud Apps, Purview) | ⏳ Planned |
+| 5 | Email, CASB, Data Protection (Defender for O365, Defender for Cloud Apps, Purview) | ✅ Complete |
 | 6 | Threat Intelligence & AI (Defender TI, Security Copilot) | ⏳ Planned |
 | 7 | Attack Simulations & Runbooks (7 documented scenarios) | ⏳ Planned |
 | 8 | Documentation + polish | ⏳ Planned |
@@ -173,15 +173,45 @@ az deployment group create \
 
 # Phase 4 — subscription scoped (Defender for Storage/SQL/Containers/CSPM)
 az deployment sub create --location eastus --template-file bicep/cloud-network-security/main-defender.bicep
+
+# Phase 5 — no Bicep; three separate deployment surfaces
+pwsh email-security/deploy-email-security.ps1
+python3 casb/deploy_casb_policies.py          # set CLOUDAPPS_TENANT_URL + CLOUDAPPS_API_TOKEN to deploy for real
+pwsh data-protection/deploy-purview-policies.ps1
 ```
 
 No subscription was available at build time — see `docs/PRD.md` Section 4 for the exact, honest boundary on what that means for what this repo does and doesn't prove.
 
 <br/>
 
-## Phase 5 — Email, CASB, Data Protection (next)
+## Phase 5 — Email, CASB, Data Protection
 
-Not yet built — Defender for Office 365 (Safe Links/Safe Attachments), Defender for Cloud Apps (CASB), and Microsoft Purview DLP/classification concepts. Two detections already exist ahead of this phase in `detections/kql/` (`mailbox-external-autoforward-rule.kql`, `safelinks-clickthrough-despite-warning.kql`, `purview-confidential-file-external-share.kql`) since all KQL content lives centrally regardless of source layer — see Phase 3.
+**A deliberately different deployment shape than Phases 1-4** — worth explaining directly, since it's a real architectural fact, not a gap: none of Defender for Office 365, Defender for Cloud Apps, or Purview are ARM resources. They're licensed M365/Security-portal-configured products with their own control planes, so this phase has **zero Bicep files** and that's correct, not incomplete.
+
+**What's here, across three genuinely distinct deployment surfaces:**
+
+| Layer | Deployment surface | Files |
+|---|---|---|
+| **Email security** (Defender for O365) | Exchange Online PowerShell | [`email-security/`](email-security) — Safe Links (click-through disabled, not just warned), Safe Attachments (dynamic delivery, fail-closed on scan error) |
+| **CASB** (Defender for Cloud Apps) | Cloud Apps REST API | [`casb/`](casb) — anomaly detection (impossible travel/mass download for SaaS apps) + OAuth app governance (flagged for review, never auto-revoked) |
+| **Data protection** (Purview) | Security & Compliance PowerShell | [`data-protection/`](data-protection) — 4-tier sensitivity label taxonomy + a DLP policy that actually references those labels, deployed in the correct dependency order |
+
+**Each policy ties back to a specific detection**, not built in isolation:
+- Safe Links → `safelinks-clickthrough-despite-warning.kql` (the policy blocks outright; the detection catches the edge case where it didn't)
+- CASB anomaly policy → `identity-lateral-movement-enriched.kql` (same lateral-movement concept, SaaS-app side instead of Azure AD sign-in side)
+- Purview DLP → `purview-confidential-file-external-share.kql` (policy blocks the share; detection catches labeling gaps)
+
+**Verified, not just written:**
+```bash
+python3 casb/deploy_casb_policies.py   # dry-run, prints the exact request each policy would send
+```
+Both CASB policies print a real, correctly-shaped API request in dry-run mode. All 7 new JSON files across email-security/casb/data-protection parse and validate.
+
+<br/>
+
+## Phase 6 — Threat Intelligence & AI (next)
+
+Not yet built — Defender Threat Intelligence integration and Security Copilot use-case documentation (KQL generation, incident summarization, MITRE mapping).
 
 <br/>
 

@@ -1,0 +1,50 @@
+{
+  "_note": "Purview sensitivity labels — deployed via New-Label / New-LabelPolicy in Security & Compliance PowerShell. This schema is what the DLP policy in this same folder actually keys off (sharingScope conditions match against these label names), so the two files aren't independent — the label has to exist before the DLP rule referencing it means anything.",
+  "labelTaxonomy": [
+    {
+      "name": "Public",
+      "priority": 0,
+      "encryptionRequired": false,
+      "externalSharingAllowed": true,
+      "watermark": false
+    },
+    {
+      "name": "Internal",
+      "priority": 1,
+      "encryptionRequired": false,
+      "externalSharingAllowed": false,
+      "watermark": false
+    },
+    {
+      "name": "Confidential",
+      "priority": 2,
+      "encryptionRequired": true,
+      "externalSharingAllowed": false,
+      "watermark": true,
+      "watermarkText": "CONFIDENTIAL — Internal Use Only"
+    },
+    {
+      "name": "Highly Confidential",
+      "priority": 3,
+      "encryptionRequired": true,
+      "externalSharingAllowed": false,
+      "watermark": true,
+      "watermarkText": "HIGHLY CONFIDENTIAL — Restricted Distribution",
+      "additionalControls": {
+        "doNotForward": true,
+        "printRestricted": true,
+        "coAuthoringDisabled": true
+      }
+    }
+  ],
+  "autoLabelingRules": [
+    {
+      "trigger": "content matches credit card number pattern",
+      "appliesLabel": "Highly Confidential"
+    },
+    {
+      "trigger": "content matches government ID pattern",
+      "appliesLabel": "Confidential"
+    }
+  ]
+}

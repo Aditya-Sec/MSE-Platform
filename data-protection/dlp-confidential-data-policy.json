@@ -1,0 +1,18 @@
+{
+  "_note": "Microsoft Purview DLP policies are Security & Compliance Center objects, deployed via New-DlpCompliancePolicy / New-DlpComplianceRule in the ExchangeOnlineManagement module (same module Security & Compliance PowerShell rides on) — not ARM/Bicep.",
+  "policyName": "MSE-DLP-Confidential-External-Share-Block",
+  "description": "The direct mitigation this project's purview-confidential-file-external-share.kql detection watches for violations of — the detection and the policy are two halves of the same control, not separate concerns.",
+  "workloads": ["SharePoint", "OneDriveForBusiness", "Teams", "Exchange"],
+  "conditions": {
+    "sensitivityLabels": ["Confidential", "Highly Confidential"],
+    "sharingScope": "ExternalUser"
+  },
+  "actions": {
+    "primary": "BlockAccess",
+    "notifyUser": true,
+    "notifyMessage": "This file is labeled Confidential and cannot be shared externally. Contact your manager if this share is required for a legitimate business reason.",
+    "generateIncidentReport": true,
+    "incidentReportSeverity": "High"
+  },
+  "custom_note": "BlockAccess (not just audit/alert) because sensitivity-labeled Confidential data leaving the org is exactly the scenario Purview labeling exists to prevent — the detection rule exists as a secondary control for cases where labeling was missing or misapplied, not as the primary defense."
+}

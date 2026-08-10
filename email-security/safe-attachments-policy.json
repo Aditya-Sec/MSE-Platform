@@ -1,0 +1,15 @@
+{
+  "_note": "Deployed via New-SafeAttachmentPolicy + New-SafeAttachmentRule in Exchange Online PowerShell — not an ARM/Bicep resource. See deploy-email-security.ps1 for the exact commands.",
+  "policyName": "MSE-SafeAttachments-AllUsers",
+  "description": "Detonation-chamber (dynamic delivery) scanning for email attachments before they reach the mailbox.",
+  "settings": {
+    "Enable": true,
+    "Action": "DynamicDelivery",
+    "ActionOnError": true,
+    "custom_note": "DynamicDelivery shows the email body immediately with attachments held back until detonation completes — chosen over 'Block' (which delays the whole message) since it doesn't degrade legitimate mail flow while still fully gating attachments. ActionOnError=true means a scan failure fails safe (blocks) rather than fails open (delivers unscanned)."
+  },
+  "redirectOnError": {
+    "enabled": true,
+    "redirectAddress": "soc-quarantine-review@domain.example"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "_note": "Governs third-party OAuth apps granted access to org data — the CASB-side counterpart to app-registration-new-credential.kql, which watches Entra ID's audit log for the same underlying risk from the identity side.",
+  "policyName": "MSE-OAuth-App-Governance",
+  "policyType": "oauth_app_policy",
+  "description": "Flags and optionally revokes OAuth apps with high-risk permission scopes or from unverified publishers.",
+  "highRiskPermissionScopes": [
+    "Mail.ReadWrite", "Mail.Send", "Files.ReadWrite.All",
+    "Directory.ReadWrite.All", "User.ReadWrite.All"
+  ],
+  "settings": {
+    "flagUnverifiedPublishers": true,
+    "flagHighRiskScopes": true,
+    "autoRevokeThreshold": "never",
+    "custom_note": "autoRevokeThreshold intentionally set to 'never', not automatic — revoking a live OAuth grant can break a legitimate integration instantly with no warning to the business owner. This is flagged for analyst review, not auto-actioned, same human-in-the-loop discipline as every destructive action in this profile's other SOAR work."
+  },
+  "approvedPublisherAllowlist": [
+    "Microsoft Corporation", "Salesforce.com, Inc.", "Slack Technologies, Inc."
+  ]
+}
