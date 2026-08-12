@@ -34,7 +34,7 @@ Every Bicep file here is compiled with the real Bicep CLI before being committed
 | 4 | Cloud & Network Security (Defender for Cloud, Firewall, WAF, Front Door, DDoS) | ✅ Complete |
 | 5 | Email, CASB, Data Protection (Defender for O365, Defender for Cloud Apps, Purview) | ✅ Complete |
 | 6 | Threat Intelligence & AI (Defender TI, Security Copilot) | ✅ Complete |
-| 7 | Attack Simulations & Runbooks (7 documented scenarios) | ⏳ Planned |
+| 7 | Attack Simulations & Runbooks (7 documented scenarios) | ✅ Complete |
 | 8 | Documentation + polish | ⏳ Planned |
 
 <br/>
@@ -226,9 +226,21 @@ Both CASB policies print a real, correctly-shaped API request in dry-run mode. A
 
 <br/>
 
-## Phase 7 — Attack Simulations & Runbooks (next)
+## Phase 7 — Attack Simulations & Runbooks
 
-Not yet built — full incident-response runbooks for the 7 documented attack scenarios (identity attack, ransomware, web attack, malware upload, phishing, Kubernetes attack, insider threat).
+**7 runbooks** in [`runbooks/`](runbooks), one per documented scenario, each following the same structure: Detection (which KQL rule fires, with ATT&CK ID) → Automated Response (which SOAR playbook, if one exists) → Manual Investigation steps → Containment → Recovery → Lessons Learned. Every runbook links directly to the specific files in this repo it references — no generic "isolate the affected system" advice untethered from what's actually built here.
+
+**Two honest gaps, named rather than hidden:** the Ransomware and Web Attack (SQLi) runbooks both note that no dedicated auto-response playbook exists yet for their scenario — only 2 SOAR playbooks are built so far ([Phase 3](#phase-3--siem--soar-core)), and pretending otherwise would undercut the whole point of this project's honesty discipline. Each gap is named as a concrete next addition, not glossed over.
+
+**One deliberate non-automation, by design, not oversight:** the Insider Threat runbook stays a manager-notification workflow rather than an auto-disable playbook — matching the original brief's own scenario design. Insider threat needs human judgment about intent in a way password-spray detection doesn't; automating straight to punitive action would be the wrong call, not an unfinished feature.
+
+**Attack simulations:** [`attack-simulations/generate_synthetic_events.py`](attack-simulations/generate_synthetic_events.py) — generates synthetic log events shaped exactly like what specific detections expect (a real password-spray pattern, a TI-watchlist match, and a benign control case that should trigger nothing). This is data generation for testing detection logic, not real attack tooling — verified live, produces correctly-shaped JSON for all three scenarios.
+
+<br/>
+
+## Phase 8 — Documentation + Polish (next, final phase)
+
+Not yet built — HLD/LLD finalization pass, deployment guide, SOC operations guide, and a final README/documentation review across all 7 completed phases.
 
 <br/>
 
