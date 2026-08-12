@@ -22,6 +22,20 @@ A complete, integrated Microsoft security architecture — 8 layers, from identi
 
 Every Bicep file here is compiled with the real Bicep CLI before being committed — run `scripts/validate_bicep.sh` yourself to check.
 
+**Project at a glance:** 17 Bicep files (all compiling clean) · 18 KQL detections (16 ATT&CK techniques covered, generated live, not asserted) · 2 SOAR playbooks · 3 Conditional Access policies · 7 attack-scenario runbooks, each tied to specific detections and playbooks in this repo · 4 architecture diagrams · zero live Azure spend, by design — see [`docs/PRD.md`](docs/PRD.md) Section 4.
+
+<br/>
+
+## Documentation index
+
+| Document | What it covers |
+|---|---|
+| [`docs/PRD.md`](docs/PRD.md) | Scope, success criteria, the honest boundary on what this project proves |
+| [`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md) | Step-by-step deployment, all 8 phases, prerequisites, cost warnings |
+| [`docs/SOC_OPERATIONS_GUIDE.md`](docs/SOC_OPERATIONS_GUIDE.md) | How this platform would actually be used day to day — triage priority, automated vs. manual response, portal map |
+| [`runbooks/`](runbooks) | 7 incident-response runbooks, one per documented attack scenario |
+| [`architecture/diagrams/`](architecture/diagrams) | HLD + 3 layer-specific LLDs |
+
 <br/>
 
 ## Phase status
@@ -35,7 +49,7 @@ Every Bicep file here is compiled with the real Bicep CLI before being committed
 | 5 | Email, CASB, Data Protection (Defender for O365, Defender for Cloud Apps, Purview) | ✅ Complete |
 | 6 | Threat Intelligence & AI (Defender TI, Security Copilot) | ✅ Complete |
 | 7 | Attack Simulations & Runbooks (7 documented scenarios) | ✅ Complete |
-| 8 | Documentation + polish | ⏳ Planned |
+| 8 | Documentation + polish | ✅ Complete |
 
 <br/>
 
@@ -140,48 +154,9 @@ bash scripts/validate_bicep.sh   # 17/17 Bicep files compiled clean, project-wid
 
 <br/>
 
-## Deploying (once you have a subscription)
+## Deploying
 
-```bash
-# Phase 1 — resource-group scoped
-az group create --name rg-mse-platform --location eastus
-az deployment group create \
-  --resource-group rg-mse-platform \
-  --template-file bicep/foundation/main.bicep
-
-# Phase 2 — subscription scoped (Defender plans apply subscription-wide)
-az deployment sub create --location eastus --template-file bicep/identity/main.bicep
-az deployment sub create --location eastus --template-file bicep/endpoint/main.bicep
-
-# Conditional Access + Intune (Microsoft Graph, not Bicep)
-pwsh conditional-access/deploy-conditional-access.ps1
-
-# Phase 3 — resource-group scoped (Sentinel workspace)
-az deployment group create \
-  --resource-group rg-mse-platform \
-  --template-file bicep/siem-soar/main.bicep
-
-# Logic Apps playbooks require an existing Sentinel workspace + API connections —
-# see soar/playbooks/*.json "metadata.note" for the exact permissions each needs
-
-# Phase 4 — resource-group scoped (Firewall, Front Door, DDoS, Bastion) —
-# requires Phase 1's subnet/VNet output IDs as parameters
-az deployment group create \
-  --resource-group rg-mse-platform \
-  --template-file bicep/cloud-network-security/main.bicep \
-  --parameters firewallSubnetId=<phase1-output> bastionSubnetId=<phase1-output> vnetId=<phase1-output>
-
-# Phase 4 — subscription scoped (Defender for Storage/SQL/Containers/CSPM)
-az deployment sub create --location eastus --template-file bicep/cloud-network-security/main-defender.bicep
-
-# Phase 5 — no Bicep; three separate deployment surfaces
-pwsh email-security/deploy-email-security.ps1
-python3 casb/deploy_casb_policies.py          # set CLOUDAPPS_TENANT_URL + CLOUDAPPS_API_TOKEN to deploy for real
-pwsh data-protection/deploy-purview-policies.ps1
-
-# Phase 6 — threat intel sync (no Bicep; Graph API)
-python3 threat-intelligence/graph_ti_indicators_sync.py   # set GRAPH_ACCESS_TOKEN to submit for real
-```
+Full step-by-step instructions (prerequisites, exact commands per phase, cost warnings before Phase 4 specifically) now live in [`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md) rather than duplicated here.
 
 No subscription was available at build time — see `docs/PRD.md` Section 4 for the exact, honest boundary on what that means for what this repo does and doesn't prove.
 
@@ -238,9 +213,13 @@ Both CASB policies print a real, correctly-shaped API request in dry-run mode. A
 
 <br/>
 
-## Phase 8 — Documentation + Polish (next, final phase)
+## Phase 8 — Documentation + Polish
 
-Not yet built — HLD/LLD finalization pass, deployment guide, SOC operations guide, and a final README/documentation review across all 7 completed phases.
+- **HLD reviewed against final state** — the master architecture diagram already reflected all 8 layers accurately (it was built comprehensively from the start rather than needing per-phase updates); verified rather than assumed before calling this phase done
+- [`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md) — every deploy command from every phase, consolidated in the correct order, with prerequisites and the Phase 4 cost warning surfaced up front rather than buried
+- [`docs/SOC_OPERATIONS_GUIDE.md`](docs/SOC_OPERATIONS_GUIDE.md) — the piece that turns 18 detections and 7 runbooks into an actual triage workflow: what fires first, which responses are automated vs. manual, and a portal map across 5 different Microsoft consoles this project touches
+- **README polish** — added a verified project-stats snapshot (each number checked with `find`/`wc -l` against the actual repo, not estimated — one number was wrong on first draft and caught before publishing) and a documentation index tying everything together
+- Removed obsolete `.gitkeep.md` placeholders from folders that now have real content
 
 <br/>
 
